@@ -80,39 +80,78 @@ def cargar_datos() -> Dict:
         return st.session_state["ctx"]
 
     ctx: Dict = {}
+    import os
+    import pathlib
 
-    st.sidebar.markdown("### 📁 Archivos de datos")
+    # Intentar cargar desde la carpeta data/ primero (para Streamlit Cloud)
+    data_dir = pathlib.Path(__file__).parent.parent / "data"
 
-    up_sol = st.sidebar.file_uploader(
-        "T_SOLICITUDES.xlsx *", type=["xlsx"], key="up_sol",
-        help="Archivo principal de solicitudes (obligatorio)",
-    )
-    if up_sol:
-        df = _read_excel(up_sol.getvalue())
-        if not df.empty:
-            ctx["sol"] = _procesar_solicitudes(df)
+    sol_path = data_dir / "T_SOLICITUDES.xlsx"
+    dee_path = data_dir / "T_DEE.xlsx"
+    ubi_path = data_dir / "T_UBIGEO.xlsx"
 
-    up_dee = st.sidebar.file_uploader(
-        "T_DEE.xlsx (opcional)", type=["xlsx"], key="up_dee"
-    )
-    if up_dee:
-        df_dee = _read_excel(up_dee.getvalue())
-        if not df_dee.empty:
-            ubi_col = _buscar_col(df_dee, ["UBIGEO", "ubigeo"])
-            if ubi_col:
-                df_dee["UBIGEO_KEY"] = _norm_ubigeo(df_dee[ubi_col])
-            ctx["dee"] = df_dee
+    if sol_path.exists():
+        try:
+            df = _read_excel(sol_path.read_bytes())
+            if not df.empty:
+                ctx["sol"] = _procesar_solicitudes(df)
+                st.sidebar.success("✅ T_SOLICITUDES.xlsx cargado automáticamente")
+        except Exception as e:
+            st.sidebar.error(f"Error cargando T_SOLICITUDES.xlsx: {e}")
 
-    up_ubi = st.sidebar.file_uploader(
-        "T_UBIGEO.xlsx (opcional)", type=["xlsx"], key="up_ubi"
-    )
-    if up_ubi:
-        ctx["ubi"] = _read_excel(up_ubi.getvalue())
+    if dee_path.exists():
+        try:
+            df_dee = _read_excel(dee_path.read_bytes())
+            if not df_dee.empty:
+                ubi_col = _buscar_col(df_dee, ["UBIGEO", "ubigeo"])
+                if ubi_col:
+                    df_dee["UBIGEO_KEY"] = _norm_ubigeo(df_dee[ubi_col])
+                ctx["dee"] = df_dee
+                st.sidebar.success("✅ T_DEE.xlsx cargado automáticamente")
+        except Exception as e:
+            st.sidebar.warning(f"T_DEE.xlsx no disponible: {e}")
+
+    if ubi_path.exists():
+        try:
+            ctx["ubi"] = _read_excel(ubi_path.read_bytes())
+            st.sidebar.success("✅ T_UBIGEO.xlsx cargado automáticamente")
+        except Exception as e:
+            st.sidebar.warning(f"T_UBIGEO.xlsx no disponible: {e}")
 
     st.sidebar.divider()
 
-    # Demo mode
+    # Si no hay datos desde carpeta, mostrar uploader
     if "sol" not in ctx:
+        st.sidebar.markdown("### 📁 Cargar archivos (opcional)")
+        up_sol = st.sidebar.file_uploader(
+            "T_SOLICITUDES.xlsx", type=["xlsx"], key="up_sol",
+            help="Sube un archivo para sobrescribir el actual",
+        )
+        if up_sol:
+            df = _read_excel(up_sol.getvalue())
+            if not df.empty:
+                ctx["sol"] = _procesar_solicitudes(df)
+
+        up_dee = st.sidebar.file_uploader(
+            "T_DEE.xlsx (opcional)", type=["xlsx"], key="up_dee"
+        )
+        if up_dee:
+            df_dee = _read_excel(up_dee.getvalue())
+            if not df_dee.empty:
+                ubi_col = _buscar_col(df_dee, ["UBIGEO", "ubigeo"])
+                if ubi_col:
+                    df_dee["UBIGEO_KEY"] = _norm_ubigeo(df_dee[ubi_col])
+                ctx["dee"] = df_dee
+
+        up_ubi = st.sidebar.file_uploader(
+            "T_UBIGEO.xlsx (opcional)", type=["xlsx"], key="up_ubi"
+        )
+        if up_ubi:
+            ctx["ubi"] = _read_excel(up_ubi.getvalue())
+
+        st.sidebar.divider()
+
+        # Demo mode
         if st.sidebar.button("▶ Usar datos de demostración", use_container_width=True):
             ctx = _demo_ctx()
             st.session_state["demo_mode"] = True
