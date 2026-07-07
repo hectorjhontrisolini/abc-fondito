@@ -1,0 +1,18 @@
+# Secrets — nunca subir al repositorio
+.streamlit/secrets.toml
+
+# Datos — no subir archivos Excel con información real
+data/*.xlsx
+data/*.xls
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
